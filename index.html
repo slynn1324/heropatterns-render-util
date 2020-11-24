@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- empty stylesheet to inject the pasted styles -->
+		<style id="stylesheet">
+		</style>
+	</head>
+	<body>
+
+		<div>
+			Width: <input type="text" id="width" value="10" />
+			Height: <input type="text" id="height" value="10" />
+			DPI: <input type="text" id="dpi" value="300" />
+			Zoom: <input type="text" id="zoom" value="1" />
+		</div>
+
+		<div style="padding-top: 10px;">
+			<div>Style: (from <a href="https://www.heropatterns.com/">heropatterns.com</a></div>
+			<textarea id="styleText" cols="80" rows="10"></textarea>
+		</div>
+
+		<div><button onclick="preview()">Preview</button></div>
+		<div style="padding-top: 10px;">Preview: (right-click, Save Image As)</div>
+		<div id="preview" style="display: none;"></div> <!-- hidden div to attach styles to and extract -->
+		<canvas id="canvas"></canvas>
+
+		<script>
+
+
+function preview(){
+
+	var styleText = document.getElementById("styleText").value;
+	console.log(styleText);
+
+	var style = "#preview{" + styleText + "}";
+	document.getElementById("stylesheet").innerText = style;
+
+	var svgDataUrl = getSvgStringFromCss();
+	console.log(svgDataUrl);
+
+	drawCanvas(svgDataUrl);
+
+}
+
+async function sleep(ms){
+
+	return new Promise((resolve, reject) => {
+
+		setTimeout(() => {
+			resolve();
+		}, ms);
+
+	});
+
+}
+
+async function drawCanvas(svgDataUrl){
+
+	var canvas = document.getElementById("canvas");
+	var dpi = document.getElementById("dpi").value;
+	var width = document.getElementById("width").value * dpi;
+	var height = document.getElementById("height").value * dpi;
+	var zoom = document.getElementById("zoom").value;
+
+
+	canvas.height = height;
+	canvas.width = width;
+
+	var ctx = canvas.getContext("2d");
+
+	var scale = (dpi/72)*zoom;
+	
+	ctx.scale(scale,scale);
+
+	// use css to zoom out the canvas to match the dpi upscaling
+	canvas.style.zoom = 72/dpi;
+
+	var img = new Image();
+	img.src = svgDataUrl;
+
+	// have to sleep...so that the img can shadow render and have dimensions
+	await sleep(10);
+
+	var imgHeight = img.height;
+	var imgWidth = img.width;
+
+	for ( var row = 0; row < (height/imgHeight)+1; ++row ){
+		for ( var col = 0; col < (width/imgWidth)+1; ++col ){
+			ctx.drawImage(img, col * imgWidth, row * imgHeight);
+		}
+	}
+
+
+}
+
+function styleDataUrlToRaw(dataUrl){
+	return decodeURIComponent(dataUrl.substring(dataUrl.indexOf(",")+1, dataUrl.length-2));
+}
+
+function svgToDataUrl(svg){
+	return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
+function getSvgStringFromCss(){
+
+	var style = getComputedStyle(document.getElementById("preview"));
+	var backgroundColor = style.backgroundColor;
+	var backgroundImage = style.backgroundImage;
+
+
+	var svg = styleDataUrlToRaw(backgroundImage);
+
+	var insertPoint = svg.indexOf('>') + 1;
+	var firstPart = svg.substring(0, insertPoint);
+	var lastPart = svg.substring(insertPoint);
+
+	var backgroundRect = '<rect width="100%" height="100%" fill="' + backgroundColor + '" />';
+
+	svg = firstPart + backgroundRect + lastPart;
+
+	return svgToDataUrl(svg);
+}
+
+// function createElementFromHtml(html){
+// 	var div = document.createElement('div');
+// 	div.innerHTML = html;
+
+// 	return div.firstChild;
+// }
+
+
+
+
+// var styleTarget = document.getElementById("styleTarget");
+// var style = getComputedStyle(styleTarget);
+// var imageUrl = style.backgroundImage;
+// var svgText = decodeURIComponent(imageUrl.substring(imageUrl.indexOf(',')+1, imageUrl.length-2));
+// var backgroundColor = style.backgroundColor;
+
+// console.log(svgText);
+// console.log(backgroundColor);
+
+
+// var endOfOpenTag = svgText.indexOf('>');
+
+// var firstPart = svgText.substring(0, endOfOpenTag+1);
+// var theRest = svgText.substring(endOfOpenTag+1)
+
+// var newSvgText = firstPart + '<rect width="100%" height="100%" fill="' + backgroundColor + '" />' + theRest;
+
+// var svg = createElementFromHtml(newSvgText);
+
+// document.getElementById("preview").append(svg);
+
+
+// var canvas = document.getElementById("canvas");
+// var ctx = canvas.getContext('2d');
+
+// var img = new Image();
+// img.src = 'data:image/svg+xml,' + encodeURIComponent(newSvgText);
+
+// var width = img.width;
+// var height = img.height;
+
+// for ( var row = 0; row < (3000/width)+1; ++row){
+// 	for ( var col = 0; col < (3000/width)+1; ++col ){
+// 		ctx.drawImage(img, col * width, row * height);
+// 	}
+// }
+
+
+// var svg = createElementFromHtml(svgText);
+
+// console.log(svg);
+
+// console.log(svg.width.baseVal.value);
+
+// var rect = createElementFromHtml('<rect width="100%" height="100%" fill="#DFDBE5" />');
+// svg.insertBefore(rect, svg.childNodes[0]);
+
+// document.getElementById("preview").append(svg);
+
+
+
+// var bg = new Image();
+// bg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%239C92AC' fill-opacity='0.5' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"
+
+
+// console.log(bg.width)
+// console.log(bg.height)
+
+
+// function save(){
+// 	var canvas = document.getElementById("canvas");
+// 	var dataUrl = canvas.toDataURL("image/png"); //.replace("image/png", "image/octet-stream");
+
+// 	console.log(dataUrl);
+// }
+		</script>
+	</body>
+</html>
